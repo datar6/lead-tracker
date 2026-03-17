@@ -1,12 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { leadsApi } from '@/lib/api';
-import type { Lead, LeadsQuery, LeadStatus, PaginatedLeads } from '@/types/lead';
-import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/types/lead';
+import type { LeadsQuery, LeadStatus, PaginatedLeads } from '@/types/lead';
+import { StatCards } from '@/components/leads/stat-cards';
+import { LeadsToolbar } from '@/components/leads/leads-toolbar';
+import { LeadsTable } from '@/components/leads/leads-table';
+import { LeadFormModal } from '@/components/leads/lead-form-modal';
+import { Pagination } from '@/components/ui/pagination';
 
 const STATUSES: LeadStatus[] = ['NEW', 'CONTACTED', 'IN_PROGRESS', 'WON', 'LOST'];
+
+type StatusCounts = Record<LeadStatus, number>;
 
 export default function LeadsPage() {
   const [result, setResult] = useState<PaginatedLeads | null>(null);
@@ -21,6 +26,7 @@ export default function LeadsPage() {
   });
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [counts, setCounts] = useState<StatusCounts | null>(null);
 
   const fetchLeads = useCallback(async (q: LeadsQuery) => {
     setLoading(true);
@@ -36,11 +42,15 @@ export default function LeadsPage() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchLeads({ ...query, q: search || undefined, page: 1 });
-    }, 300);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    Promise.all(
+      STATUSES.map((s) => leadsApi.list({ status: s, limit: 1 }).then((r) => [s, r.total] as const))
+    ).then((entries) => setCounts(Object.fromEntries(entries) as StatusCounts));
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => fetchLeads({ ...query, q: search || undefined, page: 1 }), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, query.status, query.sort, query.order, query.limit]);
 
   useEffect(() => {
@@ -53,199 +63,85 @@ export default function LeadsPage() {
   }
 
   const totalPages = result ? Math.ceil(result.total / (query.limit ?? 20)) : 1;
+  const total = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900">Leads</h1>
+    <div className="min-h-screen bg-base-200">
+      {/* Top bar */}
+      <header className="bg-base-100 border-b border-base-300">
+        <div className="mx-auto max-w-7xl px-8 py-5 flex items-center justify-between gap-4">
+          <div className="shrink-0">
+            <div className="flex items-center gap-2">
+              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+              </svg>
+              <h1 className="text-2xl font-bold tracking-tight text-base-content">LeadTracker</h1>
+            </div>
+            <p className="text-sm text-base-content/40 mt-0.5 pl-8">
+              Your sales pipeline at a glance
+              {total > 0 && <> · <span className="text-base-content/60 font-medium">{total} leads</span></>}
+            </p>
+          </div>
           <button
+            className="btn btn-primary btn-sm px-5 rounded-full shrink-0 gap-1.5"
             onClick={() => setShowCreate(true)}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
           >
-            + New Lead
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            New Lead
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="mb-4 flex flex-wrap gap-3">
-          <input
-            type="text"
-            placeholder="Search name, email, company…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 w-64"
-          />
-          <select
-            value={query.status ?? ''}
-            onChange={(e) => setFilter({ status: (e.target.value as LeadStatus) || undefined })}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-          >
-            <option value="">All statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-            ))}
-          </select>
-          <select
-            value={`${query.sort}:${query.order}`}
-            onChange={(e) => {
-              const [sort, order] = e.target.value.split(':') as [LeadsQuery['sort'], LeadsQuery['order']];
-              setFilter({ sort, order });
-            }}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-          >
-            <option value="createdAt:desc">Newest first</option>
-            <option value="createdAt:asc">Oldest first</option>
-            <option value="updatedAt:desc">Recently updated</option>
-            <option value="updatedAt:asc">Least recently updated</option>
-          </select>
-          <select
-            value={query.limit}
-            onChange={(e) => setFilter({ limit: Number(e.target.value) })}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-          >
-            <option value={10}>10 / page</option>
-            <option value={20}>20 / page</option>
-            <option value={50}>50 / page</option>
-          </select>
-        </div>
+        <StatCards
+          counts={counts}
+          total={total}
+          activeStatus={query.status}
+          onStatusToggle={(status) => setFilter({ status: query.status === status ? undefined : status })}
+        />
+      </header>
 
-        {/* Table */}
-        {error && <p className="mb-4 text-red-600">{error}</p>}
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-left text-zinc-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Company</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Value</th>
-                <th className="px-4 py-3 font-medium">Created</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-zinc-400">Loading…</td></tr>
-              ) : result?.data.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-zinc-400">No leads found</td></tr>
-              ) : (
-                result?.data.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-zinc-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-zinc-900">
-                      <Link href={`/leads/${lead.id}`} className="hover:underline">{lead.name}</Link>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">{lead.email}</td>
-                    <td className="px-4 py-3 text-zinc-600">{lead.company ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${LEAD_STATUS_COLORS[lead.status]}`}>
-                        {LEAD_STATUS_LABELS[lead.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {lead.value != null ? `$${lead.value.toLocaleString()}` : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">
-                      {new Date(lead.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="mx-auto max-w-7xl px-8 py-6 space-y-4">
+        <LeadsToolbar
+          search={search}
+          onSearchChange={setSearch}
+          sortValue={`${query.sort}:${query.order}`}
+          onSortChange={(sort, order) => setFilter({ sort, order })}
+          limit={query.limit ?? 20}
+          onLimitChange={(limit) => setFilter({ limit })}
+        />
 
-        {/* Pagination */}
-        {result && result.total > 0 && (
-          <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
-            <span>
-              {(((query.page ?? 1) - 1) * (query.limit ?? 20)) + 1}–
-              {Math.min((query.page ?? 1) * (query.limit ?? 20), result.total)} of {result.total}
-            </span>
-            <div className="flex gap-2">
-              <button
-                disabled={(query.page ?? 1) <= 1}
-                onClick={() => setQuery((prev) => ({ ...prev, page: (prev.page ?? 1) - 1 }))}
-                className="rounded px-3 py-1 border border-zinc-300 disabled:opacity-40 hover:bg-zinc-100"
-              >
-                Previous
-              </button>
-              <button
-                disabled={(query.page ?? 1) >= totalPages}
-                onClick={() => setQuery((prev) => ({ ...prev, page: (prev.page ?? 1) + 1 }))}
-                className="rounded px-3 py-1 border border-zinc-300 disabled:opacity-40 hover:bg-zinc-100"
-              >
-                Next
-              </button>
-            </div>
+        {error && (
+          <div role="alert" className="alert alert-error">
+            <span>{error}</span>
           </div>
+        )}
+
+        <LeadsTable
+          data={result?.data ?? []}
+          total={result?.total ?? 0}
+          loading={loading}
+          limit={query.limit ?? 20}
+        />
+
+        {result && result.total > 0 && (
+          <Pagination
+            page={query.page ?? 1}
+            totalPages={totalPages}
+            total={result.total}
+            limit={query.limit ?? 20}
+            onPageChange={(p) => setQuery((prev) => ({ ...prev, page: p }))}
+          />
         )}
       </div>
 
       {/* Create modal */}
       {showCreate && (
-        <CreateLeadModal
+        <LeadFormModal
           onClose={() => setShowCreate(false)}
-          onCreated={() => {
-            setShowCreate(false);
-            fetchLeads({ ...query, q: search || undefined });
-          }}
+          onSaved={() => { setShowCreate(false); fetchLeads({ ...query, q: search || undefined }); }}
         />
       )}
-    </div>
-  );
-}
-
-function CreateLeadModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [form, setForm] = useState({ name: '', email: '', company: '', value: '', notes: '', status: 'NEW' as LeadStatus });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await leadsApi.create({
-        name: form.name,
-        email: form.email,
-        company: form.company || undefined,
-        value: form.value ? Number(form.value) : undefined,
-        notes: form.notes || undefined,
-        status: form.status,
-      } as Partial<Lead>);
-      onCreated();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold text-zinc-900">New Lead</h2>
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input required placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
-          <input required type="email" placeholder="Email *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
-          <input placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="input" />
-          <input type="number" placeholder="Value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="input" />
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })} className="input">
-            {STATUSES.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
-          </select>
-          <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="input resize-none" />
-          <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50">
-              {saving ? 'Saving…' : 'Create'}
-            </button>
-            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-zinc-300 py-2 text-sm font-medium hover:bg-zinc-50">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

@@ -8,7 +8,12 @@
     "dev:all": "concurrently \"pnpm dev:backend\" \"pnpm dev\"",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "test": "pnpm --filter @lead-tracker/backend test"
+    "test": "pnpm --filter @lead-tracker/backend test",
+    "db:seed": "pnpm --filter @lead-tracker/backend db:seed",
+    "setup": "docker compose up -d && sleep 3 && pnpm --filter @lead-tracker/backend db:migrate && pnpm dev:all",
+    "start:backend": "pnpm --filter @lead-tracker/backend start:prod",
+    "start:frontend": "pnpm --filter @lead-tracker/frontend start",
+    "start:prod": "concurrently \"pnpm start:backend\" \"pnpm start:frontend\""
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
