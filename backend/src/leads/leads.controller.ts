@@ -6,43 +6,49 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
+  Patch,
   Post,
-  Put,
+  Query,
 } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LeadsService } from './leads.service.js';
-import type { Lead, NewLead } from '../database/index.js';
+import { CreateLeadDto } from './dto/create-lead.dto.js';
+import { UpdateLeadDto } from './dto/update-lead.dto.js';
+import { LeadsQueryDto } from './dto/leads-query.dto.js';
 
+@ApiTags('leads')
 @Controller('leads')
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Get()
-  findAll(): Promise<Lead[]> {
-    return this.leadsService.findAll();
+  @ApiOperation({ summary: 'List leads with pagination, filtering, search, sorting' })
+  findAll(@Query() query: LeadsQueryDto) {
+    return this.leadsService.findAll(query);
   }
 
   @Get(':id')
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Lead> {
+  @ApiOperation({ summary: 'Get lead by ID' })
+  findById(@Param('id') id: string) {
     return this.leadsService.findById(id);
   }
 
   @Post()
-  create(@Body() body: NewLead): Promise<Lead> {
+  @ApiOperation({ summary: 'Create a lead' })
+  create(@Body() body: CreateLeadDto) {
     return this.leadsService.create(body);
   }
 
-  @Put(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: Partial<NewLead>,
-  ): Promise<Lead> {
+  @Patch(':id')
+  @ApiOperation({ summary: 'Partially update a lead (including status change)' })
+  update(@Param('id') id: string, @Body() body: UpdateLeadDto) {
     return this.leadsService.update(id, body);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  @ApiOperation({ summary: 'Delete a lead' })
+  async delete(@Param('id') id: string): Promise<void> {
     return this.leadsService.delete(id);
   }
 }
