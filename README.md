@@ -25,7 +25,7 @@ docker compose up -d
 
 # 3. Copy env files
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
+cp frontend/.env.example frontend/.env
 
 # 4. Run migrations
 pnpm --filter @lead-tracker/backend db:migrate
