@@ -17,7 +17,13 @@ export default function LeadsPage() {
   const [result, setResult] = useState<PaginatedLeads | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState<LeadsQuery>({ page: 1, limit: 20, sort: 'createdAt', order: 'desc' });
+
+  const [query, setQuery] = useState<LeadsQuery>({
+    page: 1,
+    limit: 20,
+    sort: 'createdAt',
+    order: 'desc',
+  });
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [counts, setCounts] = useState<StatusCounts | null>(null);
@@ -26,7 +32,8 @@ export default function LeadsPage() {
     setLoading(true);
     setError(null);
     try {
-      setResult(await leadsApi.list(q));
+      const data = await leadsApi.list(q);
+      setResult(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -48,7 +55,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetchLeads({ ...query, q: search || undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.page]);
 
   function setFilter(patch: Partial<LeadsQuery>) {
@@ -128,6 +135,7 @@ export default function LeadsPage() {
         )}
       </div>
 
+      {/* Create modal */}
       {showCreate && (
         <LeadFormModal
           onClose={() => setShowCreate(false)}
