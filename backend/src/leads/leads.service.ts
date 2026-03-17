@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { LeadsRepository } from './leads.repository.js';
 import type { PaginatedLeads } from './leads.types.js';
 import type { Lead } from '../database/index.js';
@@ -20,18 +20,37 @@ export class LeadsService {
     return lead;
   }
 
-  create(data: CreateLeadDto): Promise<Lead> {
-    return this.leadsRepository.create(data);
+  async create(data: CreateLeadDto): Promise<Lead> {
+    try {
+      return await this.leadsRepository.create(data);
+    } catch (e: any) {
+      if (isDuplicateEmailError(e)) {
+        throw new ConflictException(`A lead with email "${data.email}" already exists`);
+      }
+      throw e;
+    }
   }
 
   async update(id: string, data: UpdateLeadDto): Promise<Lead> {
-    const lead = await this.leadsRepository.update(id, data);
-    if (!lead) throw new NotFoundException(`Lead with id ${id} not found`);
-    return lead;
+    try {
+      const lead = await this.leadsRepository.update(id, data);
+      if (!lead) throw new NotFoundException(`Lead with id ${id} not found`);
+      return lead;
+    } catch (e: any) {
+      if (isDuplicateEmailError(e)) {
+        throw new ConflictException(`A lead with email "${data.email}" already exists`);
+      }
+      throw e;
+    }
   }
 
   async delete(id: string): Promise<void> {
     const deleted = await this.leadsRepository.delete(id);
     if (!deleted) throw new NotFoundException(`Lead with id ${id} not found`);
   }
+}
+
+function isDuplicateEmailError(e: any): boolean {
+  const pg = e?.code === '23505' ? e : e?.cause;
+  return pg?.code === '23505' && pg?.constraint_name === 'leads_email_unique';
 }

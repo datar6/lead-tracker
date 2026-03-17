@@ -14,27 +14,32 @@ A full-stack CRM-style lead management app. Create and manage sales leads, filte
 - [pnpm](https://pnpm.io/) 9+
 - [Docker](https://www.docker.com/) (for PostgreSQL)
 
-### Setup
+### First-time setup
 
 ```bash
 # 1. Install dependencies
 pnpm install
 
-# 2. Start the database
-docker compose up -d
-
-# 3. Copy env files
+# 2. Copy env files
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-
-# 4. Run migrations
-pnpm --filter @lead-tracker/backend db:migrate
-
-# 5. Start both servers (frontend :3000, backend :3001)
-pnpm dev:all
 ```
 
-Or start them separately:
+Then run the one-time setup command. It starts Docker, waits for the database to be ready, runs migrations, and starts both servers:
+
+```bash
+pnpm setup
+```
+
+> **Run `pnpm setup` only once** — on first clone. It applies database migrations, so running it again on an existing database is unnecessary. For subsequent starts use `pnpm dev:all` instead.
+
+### Subsequent starts
+
+```bash
+pnpm dev:all       # starts both servers (frontend :3000, backend :3001)
+```
+
+Or separately:
 
 ```bash
 pnpm dev           # Next.js frontend → http://localhost:3000
@@ -103,17 +108,33 @@ curl -X PATCH http://localhost:3001/api/leads/<lead-id> \
 
 ---
 
-## 4. Build & production
+## 4. Seeding test data
+
+To populate the database with 50 sample leads (useful for testing pagination):
+
+```bash
+pnpm db:seed
+```
+
+This inserts 50 leads spread across all statuses with random companies, values, and notes, plus comments on the first 15. With the default page size of 20 you'll get 3 pages to navigate.
+
+---
+
+## 5. Build & production
 
 ```bash
 # Build both packages
 pnpm build
 
-# Start backend in production mode
-pnpm --filter @lead-tracker/backend start:prod
+# Start both in production mode
+pnpm start:prod
+```
 
-# Start frontend in production mode
-pnpm --filter @lead-tracker/frontend start
+Or individually:
+
+```bash
+pnpm start:backend    # NestJS production server
+pnpm start:frontend   # Next.js production server
 ```
 
 Or run everything via Docker Compose (includes the database):

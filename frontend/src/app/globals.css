@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
 @plugin "daisyui/theme" {
   name: "autumn";
   default: true;
@@ -34,4 +38,15 @@
   --border: 1px;
   --depth: 1;
   --noise: 0;
+}
+
+.select:focus,
+.select:focus-visible,
+.select:focus-within,
+.input:focus,
+.input:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
