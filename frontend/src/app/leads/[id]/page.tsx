@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { leadsApi, commentsApi } from '@/lib/api';
 import type { Comment, Lead, LeadStatus } from '@/types/lead';
-import { LEAD_STATUS_LABELS } from '@/types/lead';
+import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/types/lead';
 import { Field } from '@/components/leads/field';
 import { CommentsSection } from '@/components/leads/comments-section';
 import { LeadFormModal } from '@/components/leads/lead-form-modal';
