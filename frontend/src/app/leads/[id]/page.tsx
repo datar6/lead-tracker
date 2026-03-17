@@ -5,9 +5,17 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { leadsApi, commentsApi } from '@/lib/api';
 import type { Comment, Lead, LeadStatus } from '@/types/lead';
-import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/types/lead';
+import { LEAD_STATUS_LABELS } from '@/types/lead';
 
 const STATUSES: LeadStatus[] = ['NEW', 'CONTACTED', 'IN_PROGRESS', 'WON', 'LOST'];
+
+const STATUS_BADGE: Record<LeadStatus, string> = {
+  NEW: 'badge-info',
+  CONTACTED: 'badge-warning',
+  IN_PROGRESS: 'badge-secondary',
+  WON: 'badge-success',
+  LOST: 'badge-error',
+};
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,8 +47,7 @@ export default function LeadDetailPage() {
   async function handleStatusChange(status: LeadStatus) {
     if (!lead) return;
     try {
-      const updated = await leadsApi.update(id, { status });
-      setLead(updated);
+      setLead(await leadsApi.update(id, { status }));
     } catch (e) {
       alert((e as Error).message);
     }
@@ -58,64 +65,77 @@ export default function LeadDetailPage() {
     }
   }
 
-  if (loading) return <div className="p-8 text-zinc-400">Loading…</div>;
-  if (error) return <div className="p-8 text-red-500">{error}</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-base-200 p-6">
+        <div role="alert" className="alert alert-error max-w-lg mx-auto">
+          <span>{error}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!lead) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-6">
+    <div className="min-h-screen bg-base-200 p-6">
       <div className="mx-auto max-w-3xl">
-        {/* Back */}
-        <Link href="/leads" className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800">
+
+        <Link href="/leads" className="btn btn-ghost btn-sm mb-4 gap-1">
           ← Back to leads
         </Link>
 
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-900">{lead.name}</h1>
-              <p className="text-zinc-500">{lead.email}</p>
+        {/* Lead card */}
+        <div className="card bg-base-100 shadow-sm mb-6">
+          <div className="card-body">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h1 className="card-title text-2xl">{lead.name}</h1>
+                <p className="text-base-content/60">{lead.email}</p>
+              </div>
+              <div className="flex gap-2">
+                <button className="btn btn-outline btn-sm" onClick={() => setEditing(true)}>Edit</button>
+                <button className="btn btn-error btn-sm" disabled={deleting} onClick={handleDelete}>
+                  {deleting ? <span className="loading loading-spinner loading-xs" /> : 'Delete'}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setEditing(true)}
-                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-500 disabled:opacity-50"
-              >
-                {deleting ? 'Deleting…' : 'Delete'}
-              </button>
+
+            <div className="divider my-2" />
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Field label="Company" value={lead.company ?? '—'} />
+              <Field label="Value" value={lead.value != null ? `$${lead.value.toLocaleString()}` : '—'} />
+              <Field label="Created" value={new Date(lead.createdAt).toLocaleString()} />
+              <Field label="Updated" value={new Date(lead.updatedAt).toLocaleString()} />
+              {lead.notes && <div className="col-span-2"><Field label="Notes" value={lead.notes} /></div>}
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-            <Field label="Company" value={lead.company ?? '—'} />
-            <Field label="Value" value={lead.value != null ? `$${lead.value.toLocaleString()}` : '—'} />
-            <Field label="Created" value={new Date(lead.createdAt).toLocaleString()} />
-            <Field label="Updated" value={new Date(lead.updatedAt).toLocaleString()} />
-            {lead.notes && <div className="col-span-2"><Field label="Notes" value={lead.notes} /></div>}
-          </div>
+            <div className="divider my-2" />
 
-          {/* Status */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-500">Status:</span>
-            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${LEAD_STATUS_COLORS[lead.status]}`}>
-              {LEAD_STATUS_LABELS[lead.status]}
-            </span>
-            <select
-              value={lead.status}
-              onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
-              className="rounded-lg border border-zinc-300 px-2 py-1 text-sm focus:outline-none"
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-base-content/60">Status:</span>
+              <span className={`badge ${STATUS_BADGE[lead.status]}`}>
+                {LEAD_STATUS_LABELS[lead.status]}
+              </span>
+              <select
+                value={lead.status}
+                onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
+                className="select select-bordered select-sm"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -131,10 +151,7 @@ export default function LeadDetailPage() {
         <EditLeadModal
           lead={lead}
           onClose={() => setEditing(false)}
-          onSaved={(updated) => {
-            setLead(updated);
-            setEditing(false);
-          }}
+          onSaved={(updated) => { setLead(updated); setEditing(false); }}
         />
       )}
     </div>
@@ -144,16 +161,14 @@ export default function LeadDetailPage() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-zinc-400 uppercase tracking-wide">{label}</p>
-      <p className="text-zinc-800">{value}</p>
+      <p className="text-xs text-base-content/40 uppercase tracking-wide mb-0.5">{label}</p>
+      <p className="text-base-content">{value}</p>
     </div>
   );
 }
 
 function CommentsSection({
-  leadId,
-  comments,
-  onAdded,
+  leadId, comments, onAdded,
 }: {
   leadId: string;
   comments: Comment[];
@@ -167,8 +182,7 @@ function CommentsSection({
     if (!text.trim()) return;
     setSaving(true);
     try {
-      const c = await commentsApi.create(leadId, text.trim());
-      onAdded(c);
+      onAdded(await commentsApi.create(leadId, text.trim()));
       setText('');
     } catch (e) {
       alert((e as Error).message);
@@ -178,47 +192,45 @@ function CommentsSection({
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-zinc-900">Comments ({comments.length})</h2>
+    <div className="card bg-base-100 shadow-sm">
+      <div className="card-body">
+        <h2 className="card-title text-lg">Comments ({comments.length})</h2>
 
-      <div className="mb-4 flex flex-col gap-3">
         {comments.length === 0 ? (
-          <p className="text-sm text-zinc-400">No comments yet.</p>
+          <p className="text-base-content/40 text-sm py-2">No comments yet.</p>
         ) : (
-          comments.map((c) => (
-            <div key={c.id} className="rounded-lg bg-zinc-50 px-4 py-3">
-              <p className="text-sm text-zinc-800">{c.text}</p>
-              <p className="mt-1 text-xs text-zinc-400">{new Date(c.createdAt).toLocaleString()}</p>
-            </div>
-          ))
+          <div className="flex flex-col gap-3 my-2">
+            {comments.map((c) => (
+              <div key={c.id} className="bg-base-200 rounded-box px-4 py-3">
+                <p className="text-sm text-base-content">{c.text}</p>
+                <p className="text-xs text-base-content/40 mt-1">{new Date(c.createdAt).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
         )}
-      </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Add a comment…"
-          maxLength={500}
-          className="input flex-1"
-        />
-        <button
-          type="submit"
-          disabled={saving || !text.trim()}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
-        >
-          {saving ? '…' : 'Post'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} className="flex gap-2 mt-2">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Add a comment…"
+            maxLength={500}
+            className="input input-bordered flex-1"
+          />
+          <button
+            type="submit"
+            disabled={saving || !text.trim()}
+            className="btn btn-primary"
+          >
+            {saving ? <span className="loading loading-spinner loading-sm" /> : 'Post'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
 
-function EditLeadModal({
-  lead,
-  onClose,
-  onSaved,
-}: {
+function EditLeadModal({ lead, onClose, onSaved }: {
   lead: Lead;
   onClose: () => void;
   onSaved: (l: Lead) => void;
@@ -239,15 +251,14 @@ function EditLeadModal({
     setSaving(true);
     setError(null);
     try {
-      const updated = await leadsApi.update(lead.id, {
+      onSaved(await leadsApi.update(lead.id, {
         name: form.name,
         email: form.email,
         company: form.company || undefined,
         value: form.value ? Number(form.value) : undefined,
         notes: form.notes || undefined,
         status: form.status,
-      } as Partial<Lead>);
-      onSaved(updated);
+      } as Partial<Lead>));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -256,29 +267,28 @@ function EditLeadModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold text-zinc-900">Edit Lead</h2>
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+    <div className="modal modal-open">
+      <div className="modal-box w-full max-w-md">
+        <h3 className="font-bold text-lg mb-4">Edit Lead</h3>
+        {error && <div role="alert" className="alert alert-error mb-3 text-sm"><span>{error}</span></div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input required placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
-          <input required type="email" placeholder="Email *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
-          <input placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="input" />
-          <input type="number" placeholder="Value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="input" />
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })} className="input">
+          <input required placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input input-bordered w-full" />
+          <input required type="email" placeholder="Email *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input input-bordered w-full" />
+          <input placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="input input-bordered w-full" />
+          <input type="number" placeholder="Value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="input input-bordered w-full" />
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })} className="select select-bordered w-full">
             {STATUSES.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
           </select>
-          <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="input resize-none" />
-          <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50">
-              {saving ? 'Saving…' : 'Save'}
+          <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="textarea textarea-bordered w-full" />
+          <div className="modal-action mt-0">
+            <button type="submit" disabled={saving} className="btn btn-primary flex-1">
+              {saving ? <span className="loading loading-spinner loading-sm" /> : 'Save'}
             </button>
-            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-zinc-300 py-2 text-sm font-medium hover:bg-zinc-50">
-              Cancel
-            </button>
+            <button type="button" onClick={onClose} className="btn flex-1">Cancel</button>
           </div>
         </form>
       </div>
+      <div className="modal-backdrop" onClick={onClose} />
     </div>
   );
 }
