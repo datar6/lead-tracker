@@ -93,7 +93,7 @@ export function LeadsTable({
 
   return (
     <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden">
-      <div className="overflow-x-auto" style={{ minHeight: HEADER_HEIGHT + ROW_HEIGHT * limit }}>
+      <div className="overflow-x-auto" style={{ minHeight: loading ? HEADER_HEIGHT + ROW_HEIGHT * limit : undefined }}>
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
