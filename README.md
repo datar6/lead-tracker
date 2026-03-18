@@ -28,10 +28,10 @@ cp frontend/.env.example frontend/.env
 Then run the one-time setup command. It starts Docker, waits for the database to be ready, runs migrations, and starts both servers:
 
 ```bash
-pnpm setup
+pnpm run setup
 ```
 
-> **Run `pnpm setup` only once** — on first clone. It applies database migrations, so running it again on an existing database is unnecessary. For subsequent starts use `pnpm dev:all` instead.
+> **Run `pnpm run setup` only once** — on first clone. It applies database migrations, so running it again on an existing database is unnecessary. For subsequent starts use `pnpm dev:all` instead.
 
 ### Subsequent starts
 

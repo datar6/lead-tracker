@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { LeadsQuery } from '@/types/lead';
 
 export function LeadsToolbar({
@@ -15,6 +16,25 @@ export function LeadsToolbar({
   limit: number;
   onLimitChange: (limit: number) => void;
 }) {
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+        if (e.key === 'Escape') {
+          (e.target as HTMLElement).blur();
+        }
+        return;
+      }
+      if (e.key === 'q') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="flex items-center gap-2">
       {/* Search */}
@@ -23,8 +43,9 @@ export function LeadsToolbar({
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
         </svg>
         <input
+          ref={searchRef}
           type="text"
-          placeholder="Search name, email, company…"
+          placeholder="Search name, email, company… (Q)"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="input input-sm w-full pl-9 rounded-full bg-base-100 shadow-sm"
