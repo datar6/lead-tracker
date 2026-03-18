@@ -5,7 +5,7 @@ node_modules/
 frontend/.next/
 frontend/out/
 backend/dist/
-backend/api/_dist/
+backend/api/dist/
 
 # Environment
 .env

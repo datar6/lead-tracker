@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "tsc -p tsconfig.build.json && cp -r dist api/_dist",
+  "buildCommand": "tsc -p tsconfig.vercel.json",
   "outputDirectory": ".",
   "functions": {
     "api/index.js": {
