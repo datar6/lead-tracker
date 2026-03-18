@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   useReactTable,
   getCoreRowModel,
@@ -30,12 +30,9 @@ const columns = [
   columnHelper.accessor('name', {
     header: 'Name',
     cell: (info) => (
-      <Link
-        href={`/leads/${info.row.original.id}`}
-        className="font-semibold text-base-content hover:text-primary transition-colors"
-      >
+      <span className="font-semibold text-base-content">
         {info.getValue()}
-      </Link>
+      </span>
     ),
   }),
   columnHelper.accessor('email', {
@@ -70,6 +67,9 @@ const columns = [
   }),
 ];
 
+const ROW_HEIGHT = 49; // px per row (py-3.5 + content)
+const HEADER_HEIGHT = 45;
+
 export function LeadsTable({
   data,
   total,
@@ -81,6 +81,8 @@ export function LeadsTable({
   loading: boolean;
   limit: number;
 }) {
+  const router = useRouter();
+
   const table = useReactTable({
     data,
     columns,
@@ -91,7 +93,7 @@ export function LeadsTable({
 
   return (
     <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden">
-      <div className="overflow-x-auto" style={{ minHeight: limit * 49 + 45 }}>
+      <div className="overflow-x-auto" style={{ minHeight: HEADER_HEIGHT + ROW_HEIGHT * limit }}>
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
@@ -109,11 +111,18 @@ export function LeadsTable({
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={columns.length} className="text-center py-20">
-                  <span className="loading loading-spinner loading-md text-primary" />
-                </td>
-              </tr>
+              Array.from({ length: limit }).map((_, i) => (
+                <tr
+                  key={`skeleton-${i}`}
+                  className={`border-b border-base-200 last:border-0 ${i % 2 === 1 ? 'bg-base-200/30' : ''}`}
+                >
+                  {columns.map((_, ci) => (
+                    <td key={ci} className="px-5 py-3.5">
+                      <div className="h-4 rounded bg-base-300/40 animate-pulse" style={{ width: ci === 0 ? '60%' : ci === 4 ? '40%' : ci === 5 ? '50%' : '70%' }} />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="text-center py-20">
@@ -129,7 +138,9 @@ export function LeadsTable({
               table.getRowModel().rows.map((row, i) => (
                 <tr
                   key={row.id}
-                  className={`border-b border-base-200 last:border-0 hover:bg-base-50 transition-colors ${i % 2 === 1 ? 'bg-base-200/30' : ''}`}
+                  onClick={() => router.push(`/leads/${row.original.id}`)}
+                  className={`border-b border-base-200 last:border-0 hover:bg-base-200/50 transition-colors animate-fade-in cursor-pointer ${i % 2 === 1 ? 'bg-base-200/30' : ''}`}
+                  style={{ animationDelay: `${i * 30}ms` }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-5 py-3.5">
