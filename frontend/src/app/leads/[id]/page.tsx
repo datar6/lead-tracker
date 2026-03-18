@@ -12,6 +12,93 @@ import { LeadFormModal } from '@/components/leads/lead-form-modal';
 
 const STATUSES: LeadStatus[] = ['NEW', 'CONTACTED', 'IN_PROGRESS', 'WON', 'LOST'];
 
+function SkeletonBox({ className }: { className?: string }) {
+  return <div className={`bg-base-300 rounded animate-pulse ${className ?? ''}`} />;
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-base-200">
+      {/* Header skeleton */}
+      <header className="bg-base-100 border-b border-base-300">
+        <div className="mx-auto max-w-7xl px-8 py-5 flex items-center justify-between gap-4">
+          <div>
+            <SkeletonBox className="h-7 w-40" />
+            <SkeletonBox className="h-4 w-24 mt-1.5" />
+          </div>
+          <SkeletonBox className="h-8 w-28 rounded-lg" />
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-8 py-6 space-y-4">
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body gap-0">
+            {/* Name + status + actions */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  <SkeletonBox className="h-7 w-48" />
+                  <SkeletonBox className="h-5 w-20 rounded-full" />
+                </div>
+                <SkeletonBox className="h-4 w-56 mt-2" />
+              </div>
+              <div className="flex gap-2">
+                <SkeletonBox className="h-8 w-16 rounded-lg" />
+                <SkeletonBox className="h-8 w-20 rounded-lg" />
+              </div>
+            </div>
+
+            <div className="divider my-3" />
+
+            {/* Info grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <SkeletonBox className="h-3 w-16 mb-1.5" />
+                  <SkeletonBox className="h-5 w-28" />
+                </div>
+              ))}
+            </div>
+
+            <div className="divider my-3" />
+
+            {/* Notes + status change */}
+            <div className="flex items-start justify-around gap-4">
+              <div>
+                <SkeletonBox className="h-3 w-12 mb-1.5" />
+                <SkeletonBox className="h-5 w-64" />
+              </div>
+              <div className="flex items-center gap-3">
+                <SkeletonBox className="h-4 w-24" />
+                <SkeletonBox className="h-8 w-36 rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Comments skeleton */}
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body gap-3">
+            <SkeletonBox className="h-6 w-28" />
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <SkeletonBox className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <SkeletonBox className="h-4 w-32" />
+                    <SkeletonBox className="h-4 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <SkeletonBox className="h-20 w-full rounded-lg mt-2" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -61,7 +148,7 @@ export default function LeadDetailPage() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-base-200 p-8 text-base-content/40">Loading…</div>;
+  if (loading) return <DetailSkeleton />;
   if (error) return <div className="min-h-screen bg-base-200 p-8 text-error">{error}</div>;
   if (!lead) return null;
 
