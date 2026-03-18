@@ -1,12 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "tsc -p tsconfig.build.json",
+  "buildCommand": "tsc -p tsconfig.build.json && cp -r dist api/_dist",
   "outputDirectory": ".",
   "functions": {
     "api/index.js": {
       "memory": 512,
-      "maxDuration": 30,
-      "includeFiles": "dist/**"
+      "maxDuration": 30
     }
   },
   "rewrites": [
