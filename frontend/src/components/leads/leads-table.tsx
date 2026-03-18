@@ -67,9 +67,6 @@ const columns = [
   }),
 ];
 
-const ROW_HEIGHT = 49; // px per row (py-3.5 + content)
-const HEADER_HEIGHT = 45;
-
 export function LeadsTable({
   data,
   total,
@@ -93,7 +90,7 @@ export function LeadsTable({
 
   return (
     <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden">
-      <div className="overflow-x-auto" style={{ minHeight: loading ? HEADER_HEIGHT + ROW_HEIGHT * limit : undefined }}>
+      <div className="overflow-x-auto overflow-y-hidden">
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
