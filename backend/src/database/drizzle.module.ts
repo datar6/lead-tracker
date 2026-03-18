@@ -12,7 +12,10 @@ const drizzleProvider = {
     if (!url) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
-    const client = postgres(url);
+    const client = postgres(url, {
+      prepare: false,
+      max: 1,
+    });
     return drizzle(client, { schema });
   },
 };
