@@ -1,15 +1,13 @@
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
-import type { Express } from 'express';
-import type { IncomingMessage, ServerResponse } from 'http';
-import { AppModule } from '../src/app.module.js';
+require('reflect-metadata');
+const { NestFactory } = require('@nestjs/core');
+const { ValidationPipe } = require('@nestjs/common');
+const { ExpressAdapter } = require('@nestjs/platform-express');
+const express = require('express');
+const { AppModule } = require('../dist/app.module.js');
 
-let cachedApp: Express | null = null;
+let cachedApp = null;
 
-async function createApp(): Promise<Express> {
+async function createApp() {
   if (cachedApp) return cachedApp;
 
   const expressApp = express();
@@ -22,7 +20,7 @@ async function createApp(): Promise<Express> {
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? '*',
+    origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -42,10 +40,7 @@ async function createApp(): Promise<Express> {
   return cachedApp;
 }
 
-export default async function handler(
-  req: IncomingMessage,
-  res: ServerResponse,
-): Promise<void> {
+module.exports = async function handler(req, res) {
   const app = await createApp();
   app(req, res);
-}
+};
